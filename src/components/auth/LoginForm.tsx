@@ -1,39 +1,27 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const { signIn } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // In a real implementation, this would connect to Supabase
     setIsLoading(true);
+    
     try {
-      // Simulate API call
-      toast.info("Please connect to Supabase to enable authentication");
-      console.log('Login with:', { email, password });
-      
-      // Navigate to dashboard after successful login
-      setTimeout(() => {
-        setIsLoading(false);
-        // For demo purposes, we'll simulate a successful login
-        localStorage.setItem('isLoggedIn', 'true');
-        navigate('/dashboard');
-        toast.success('Successfully logged in!');
-      }, 1500);
+      await signIn(email, password);
     } catch (error) {
       console.error('Error logging in:', error);
+    } finally {
       setIsLoading(false);
-      toast.error('Failed to login');
     }
   };
 
@@ -65,9 +53,9 @@ const LoginForm: React.FC = () => {
               <label htmlFor="password" className="text-sm font-medium">
                 Password
               </label>
-              <a href="#" className="text-sm text-teal-500 hover:text-teal-600">
+              <Link to="#" className="text-sm text-teal-500 hover:text-teal-600">
                 Forgot Password?
-              </a>
+              </Link>
             </div>
             <Input
               id="password"
@@ -90,9 +78,9 @@ const LoginForm: React.FC = () => {
       <CardFooter className="flex justify-center">
         <p className="text-sm text-gray-500">
           Don't have an account?{" "}
-          <a href="/signup" className="text-teal-500 hover:text-teal-600 font-medium">
+          <Link to="/signup" className="text-teal-500 hover:text-teal-600 font-medium">
             Sign Up
-          </a>
+          </Link>
         </p>
       </CardFooter>
     </Card>

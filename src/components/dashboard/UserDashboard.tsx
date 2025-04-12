@@ -1,45 +1,82 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Calendar, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ItineraryCard from './ItineraryCard';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
-// Sample data for display purposes
-const sampleItineraries = [
-  {
-    id: 'sample-123',
-    destination: 'Tokyo, Japan',
-    startDate: '2025-06-15',
-    endDate: '2025-06-20',
-    duration: 5,
-    createdAt: '2025-04-02',
-    thumbnail: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-  },
-  {
-    id: 'sample-456',
-    destination: 'Paris, France',
-    startDate: '2025-07-10',
-    endDate: '2025-07-17',
-    duration: 7,
-    createdAt: '2025-04-05',
-    thumbnail: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-  },
-  {
-    id: 'sample-789',
-    destination: 'Rome, Italy',
-    startDate: '2025-09-05',
-    endDate: '2025-09-10',
-    duration: 5,
-    createdAt: '2025-04-10',
-    thumbnail: 'https://images.unsplash.com/photo-1529260830199-42c24126f198?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-  }
-];
+// Define itinerary type
+interface Itinerary {
+  id: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  duration?: number;
+  created_at: string;
+  thumbnail?: string;
+}
 
 const UserDashboard: React.FC = () => {
-  // In a real implementation, we would fetch the user's itineraries from Supabase
+  const [itineraries, setItineraries] = useState<Itinerary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchItineraries = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('itineraries')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          // Calculate duration for each itinerary
+          const processedData = data.map(item => {
+            const startDate = new Date(item.start_date);
+            const endDate = new Date(item.end_date);
+            const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+            const duration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            return {
+              ...item,
+              duration,
+              // We could set a thumbnail based on destination in a real app
+              thumbnail: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+            };
+          });
+          
+          setItineraries(processedData);
+        }
+      } catch (error) {
+        console.error('Error fetching itineraries:', error);
+        toast.error('Failed to load your itineraries');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchItineraries();
+  }, [user]);
   
+  if (loading) {
+    return (
+      <div className="w-full text-center py-10">
+        <p>Loading your trips...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full space-y-8">
       <div className="flex justify-between items-center">
@@ -55,16 +92,16 @@ const UserDashboard: React.FC = () => {
         </Link>
       </div>
       
-      {sampleItineraries.length > 0 ? (
+      {itineraries.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sampleItineraries.map((itinerary) => (
+          {itineraries.map((itinerary) => (
             <ItineraryCard
               key={itinerary.id}
               id={itinerary.id}
               destination={itinerary.destination}
-              startDate={itinerary.startDate}
-              endDate={itinerary.endDate}
-              duration={itinerary.duration}
+              startDate={itinerary.start_date}
+              endDate={itinerary.end_date}
+              duration={itinerary.duration || 0}
               thumbnail={itinerary.thumbnail}
             />
           ))}

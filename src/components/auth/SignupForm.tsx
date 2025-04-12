@@ -1,37 +1,30 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { Link, useNavigate } from 'react-router-dom';
 
 const SignupForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { signUp } = useAuth();
   const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // In a real implementation, this would connect to Supabase
     setIsLoading(true);
+    
     try {
-      // Simulate API call
-      toast.info("Please connect to Supabase to enable authentication");
-      console.log('Signup with:', { email, password, name });
-      
-      // Navigate to login after successful signup
-      setTimeout(() => {
-        setIsLoading(false);
-        navigate('/login');
-      }, 1500);
+      await signUp(email, password, name);
+      navigate('/login');
     } catch (error) {
       console.error('Error signing up:', error);
+    } finally {
       setIsLoading(false);
-      toast.error('Failed to create account');
     }
   };
 
@@ -98,9 +91,9 @@ const SignupForm: React.FC = () => {
       <CardFooter className="flex justify-center">
         <p className="text-sm text-gray-500">
           Already have an account?{" "}
-          <a href="/login" className="text-teal-500 hover:text-teal-600 font-medium">
+          <Link to="/login" className="text-teal-500 hover:text-teal-600 font-medium">
             Login
-          </a>
+          </Link>
         </p>
       </CardFooter>
     </Card>

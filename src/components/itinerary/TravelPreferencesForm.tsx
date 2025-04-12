@@ -10,6 +10,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { generateItinerary } from '@/services/itineraryService';
 
 const TravelPreferencesForm: React.FC = () => {
   const [destination, setDestination] = useState('');
@@ -22,6 +25,7 @@ const TravelPreferencesForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const interestOptions = [
     { id: 'nature', label: 'Nature & Outdoors' },
@@ -45,6 +49,12 @@ const TravelPreferencesForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!user) {
+      toast.error('You must be logged in to create an itinerary');
+      navigate('/login');
+      return;
+    }
+    
     if (interests.length === 0) {
       toast.error('Please select at least one interest');
       return;
@@ -52,28 +62,56 @@ const TravelPreferencesForm: React.FC = () => {
     
     setIsLoading(true);
     
-    // In a real implementation, this would connect to Gemini API and Supabase
     try {
-      toast.info("Please connect to Supabase to enable itinerary generation");
-      console.log('Generating itinerary with:', { 
-        destination, 
-        startDate, 
-        endDate, 
-        budget, 
-        numTravelers, 
-        interests, 
-        additionalInfo 
-      });
+      toast.info("Generating your personalized itinerary...");
       
-      // Navigate to itinerary view after "generation"
-      setTimeout(() => {
-        setIsLoading(false);
-        navigate('/itinerary/sample');
-      }, 2000);
+      // Generate itinerary using Gemini AI
+      const preferences = {
+        destination,
+        startDate,
+        endDate,
+        budget,
+        numTravelers,
+        interests,
+        additionalInfo
+      };
+      
+      const itinerary = await generateItinerary(preferences);
+      
+      if (!itinerary) {
+        throw new Error('Failed to generate itinerary');
+      }
+      
+      // Save itinerary to Supabase
+      const { data, error } = await supabase
+        .from('itineraries')
+        .insert({
+          user_id: user.id,
+          destination,
+          start_date: startDate,
+          end_date: endDate,
+          budget,
+          num_travelers: Number(numTravelers),
+          interests,
+          additional_info: additionalInfo,
+          content: itinerary
+        })
+        .select('id')
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Itinerary generated successfully!');
+      
+      // Navigate to the itinerary view
+      navigate(`/itinerary/${data.id}`);
     } catch (error) {
       console.error('Error generating itinerary:', error);
+      toast.error('Failed to generate itinerary. Please try again.');
+    } finally {
       setIsLoading(false);
-      toast.error('Failed to generate itinerary');
     }
   };
 
