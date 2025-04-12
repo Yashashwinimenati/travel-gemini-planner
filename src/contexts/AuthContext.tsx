@@ -50,19 +50,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name: string) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             name
-          }
+          },
+          // This ensures the user is immediately signed in after signup
+          emailRedirectTo: window.location.origin
         }
       });
       
       if (error) throw error;
       
-      toast.success('Signup successful! Please check your email for verification.');
+      // Immediately sign in the user after successful signup
+      if (data.user) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (signInError) throw signInError;
+        
+        toast.success('Signup successful! You are now logged in.');
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       toast.error(error.message || 'An error occurred during signup');
       throw error;

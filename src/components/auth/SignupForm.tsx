@@ -20,7 +20,7 @@ const SignupForm: React.FC = () => {
     
     try {
       await signUp(email, password, name);
-      navigate('/login');
+      // Navigation is now handled in the AuthContext
     } catch (error) {
       console.error('Error signing up:', error);
     } finally {
