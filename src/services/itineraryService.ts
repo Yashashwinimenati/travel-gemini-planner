@@ -29,6 +29,61 @@ export interface ItineraryData {
   user_id: string;
 }
 
+// Mock function to simulate AI generating an itinerary
+export const generateItinerary = async (preferences: any): Promise<GeneratedItinerary> => {
+  // This is a mock implementation that returns a sample itinerary
+  // In a real implementation, this would call an AI service
+  
+  const numDays = calculateDays(preferences.startDate, preferences.endDate);
+  
+  return {
+    title: `Your ${preferences.budget} trip to ${preferences.destination}`,
+    description: `A ${numDays}-day itinerary for ${preferences.numTravelers} traveler(s) focusing on ${preferences.interests.join(', ')}.`,
+    days: Array.from({ length: numDays }, (_, i) => ({
+      day: i + 1,
+      activities: [
+        {
+          time: "09:00 AM",
+          activity: "Breakfast",
+          description: "Start your day with a local breakfast",
+          location: "Local cafe"
+        },
+        {
+          time: "11:00 AM",
+          activity: "Sightseeing",
+          description: "Visit popular attractions",
+          location: "City center"
+        },
+        {
+          time: "02:00 PM",
+          activity: "Lunch",
+          description: "Enjoy local cuisine",
+          location: "Restaurant district"
+        },
+        {
+          time: "04:00 PM",
+          activity: "Activity",
+          description: "Engage in an activity based on your interests",
+          location: "Various locations"
+        },
+        {
+          time: "07:00 PM",
+          activity: "Dinner",
+          description: "Experience local nightlife and cuisine",
+          location: "Downtown"
+        }
+      ]
+    }))
+  };
+};
+
+function calculateDays(startDate: string, endDate: string): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
 export const saveItinerary = async (itineraryData: Omit<ItineraryData, 'id' | 'created_at'>) => {
   // Convert the GeneratedItinerary to a JSON object
   const dataToInsert = {
@@ -47,7 +102,7 @@ export const saveItinerary = async (itineraryData: Omit<ItineraryData, 'id' | 'c
     throw error;
   }
   
-  return data;
+  return data as ItineraryData;
 };
 
 export const getUserItineraries = async () => {
@@ -61,7 +116,7 @@ export const getUserItineraries = async () => {
     throw error;
   }
   
-  return data as ItineraryData[];
+  return data as unknown as ItineraryData[];
 };
 
 export const getItineraryById = async (id: string) => {
@@ -76,5 +131,5 @@ export const getItineraryById = async (id: string) => {
     throw error;
   }
   
-  return data as ItineraryData;
+  return data as unknown as ItineraryData;
 };

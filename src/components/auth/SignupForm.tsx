@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/contexts/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const SignupForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -12,7 +13,6 @@ const SignupForm: React.FC = () => {
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { signUp } = useAuth();
-  const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,9 +20,11 @@ const SignupForm: React.FC = () => {
     
     try {
       await signUp(email, password, name);
-      // Navigation is now handled in the AuthContext
-    } catch (error) {
+      // Navigation is handled in the AuthContext
+      toast.success('Signed up successfully! You are now logged in.');
+    } catch (error: any) {
       console.error('Error signing up:', error);
+      // Toast error is handled in AuthContext
     } finally {
       setIsLoading(false);
     }

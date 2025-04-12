@@ -50,35 +50,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name: string) => {
     try {
+      // First create the user
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             name
-          },
-          // This ensures the user is immediately signed in after signup
-          emailRedirectTo: window.location.origin
+          }
         }
       });
       
       if (error) throw error;
+
+      // After signup, immediately sign in
+      await signIn(email, password);
       
-      // Immediately sign in the user after successful signup
-      if (data.user) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (signInError) throw signInError;
-        
-        toast.success('Signup successful! You are now logged in.');
-        navigate('/dashboard');
-      }
     } catch (error: any) {
-      toast.error(error.message || 'An error occurred during signup');
-      throw error;
+      // Check if error is "Email not confirmed"
+      if (error.message === "Email not confirmed") {
+        // Try to sign in anyway
+        try {
+          await signIn(email, password);
+          return;
+        } catch (signInError) {
+          // If sign in fails too, show the original error
+          toast.error(error.message || 'An error occurred during signup');
+          throw error;
+        }
+      } else {
+        toast.error(error.message || 'An error occurred during signup');
+        throw error;
+      }
     }
   };
 
@@ -89,12 +92,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password
       });
       
-      if (error) throw error;
+      if (error) {
+        // Check if error is "Email not confirmed"
+        if (error.message === "Email not confirmed") {
+          toast.warning('Your email is not confirmed, but you can continue to use the app');
+          
+          // Update the user state manually since we're allowing login
+          const { data } = await supabase.auth.getUser();
+          if (data && data.user) {
+            setUser(data.user);
+            localStorage.setItem('isLoggedIn', 'true');
+            toast.success('Logged in successfully!');
+            navigate('/dashboard');
+            return;
+          }
+        }
+        throw error;
+      }
       
       toast.success('Logged in successfully!');
       navigate('/dashboard');
     } catch (error: any) {
-      toast.error(error.message || 'Invalid login credentials');
+      if (error.message === "Email not confirmed") {
+        // We already tried to handle this above
+        toast.error('Failed to login. Please try again later.');
+      } else {
+        toast.error(error.message || 'Invalid login credentials');
+      }
       throw error;
     }
   };

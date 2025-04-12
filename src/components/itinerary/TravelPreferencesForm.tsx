@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -10,9 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { generateItinerary } from '@/services/itineraryService';
+import { generateItinerary, saveItinerary } from '@/services/itineraryService';
 
 const TravelPreferencesForm: React.FC = () => {
   const [destination, setDestination] = useState('');
@@ -65,7 +63,7 @@ const TravelPreferencesForm: React.FC = () => {
     try {
       toast.info("Generating your personalized itinerary...");
       
-      // Generate itinerary using Gemini AI
+      // Generate itinerary using our function
       const preferences = {
         destination,
         startDate,
@@ -78,35 +76,23 @@ const TravelPreferencesForm: React.FC = () => {
       
       const itinerary = await generateItinerary(preferences);
       
-      if (!itinerary) {
-        throw new Error('Failed to generate itinerary');
-      }
-      
       // Save itinerary to Supabase
-      const { data, error } = await supabase
-        .from('itineraries')
-        .insert({
-          user_id: user.id,
-          destination,
-          start_date: startDate,
-          end_date: endDate,
-          budget,
-          num_travelers: Number(numTravelers),
-          interests,
-          additional_info: additionalInfo,
-          content: itinerary
-        })
-        .select('id')
-        .single();
-      
-      if (error) {
-        throw error;
-      }
+      const savedItinerary = await saveItinerary({
+        user_id: user.id,
+        destination,
+        start_date: startDate,
+        end_date: endDate,
+        budget,
+        num_travelers: Number(numTravelers),
+        interests,
+        additional_info: additionalInfo,
+        content: itinerary
+      });
       
       toast.success('Itinerary generated successfully!');
       
       // Navigate to the itinerary view
-      navigate(`/itinerary/${data.id}`);
+      navigate(`/itinerary/${savedItinerary.id}`);
     } catch (error) {
       console.error('Error generating itinerary:', error);
       toast.error('Failed to generate itinerary. Please try again.');
@@ -277,7 +263,7 @@ const TravelPreferencesForm: React.FC = () => {
         </form>
       </CardContent>
       <CardFooter className="text-center text-sm text-gray-500">
-        Powered by Gemini AI. Your preferences will be used to create a personalized travel plan.
+        Your preferences will be used to create a personalized travel plan.
       </CardFooter>
     </Card>
   );
