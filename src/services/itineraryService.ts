@@ -1,5 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export interface GeneratedItinerary {
   title: string;
@@ -31,62 +31,119 @@ export interface ItineraryData {
   user_id: string;
 }
 
-// Mock function to simulate AI generating an itinerary
+// Generate itinerary using Gemini API via Supabase Edge Function
 export const generateItinerary = async (preferences: any): Promise<GeneratedItinerary> => {
-  // This is a mock implementation that returns a sample itinerary
-  // In a real implementation, this would call an AI service
-  
   const numDays = calculateDays(preferences.startDate, preferences.endDate);
   
-  return {
-    title: `Your ${preferences.budget} trip to ${preferences.destination}`,
-    description: `A ${numDays}-day itinerary for ${preferences.numTravelers} traveler(s) focusing on ${preferences.interests.join(', ')}.`,
-    days: Array.from({ length: numDays }, (_, i) => ({
-      day: i + 1,
-      activities: [
+  try {
+    // Create the prompt for Gemini
+    const prompt = `Create a detailed ${numDays}-day travel itinerary for ${preferences.destination}.
+Budget: ${preferences.budget}
+Number of travelers: ${preferences.numTravelers}
+Interests: ${preferences.interests.join(', ')}
+${preferences.additionalInfo ? `Additional information: ${preferences.additionalInfo}` : ''}
+
+Please format the response as a JSON object with the following structure:
+{
+  "title": "A catchy title for the itinerary",
+  "description": "A brief description of the overall trip",
+  "days": [
+    {
+      "day": 1,
+      "activities": [
         {
-          time: "09:00 AM",
-          activity: "Breakfast",
-          description: "Start your day with a local breakfast",
-          location: "Local cafe",
-          type: "food",
-          title: "Breakfast"
-        },
-        {
-          time: "11:00 AM",
-          activity: "Sightseeing",
-          description: "Visit popular attractions",
-          location: "City center",
-          type: "culture",
-          title: "Sightseeing"
-        },
-        {
-          time: "02:00 PM",
-          activity: "Lunch",
-          description: "Enjoy local cuisine",
-          location: "Restaurant district",
-          type: "food",
-          title: "Lunch"
-        },
-        {
-          time: "04:00 PM",
-          activity: "Activity",
-          description: "Engage in an activity based on your interests",
-          location: "Various locations",
-          type: preferences.interests[0] || "adventure",
-          title: "Afternoon Activity"
-        },
-        {
-          time: "07:00 PM",
-          activity: "Dinner",
-          description: "Experience local nightlife and cuisine",
-          location: "Downtown",
-          type: "food",
-          title: "Dinner"
+          "time": "Morning/Afternoon/Evening time (e.g., 09:00 AM)",
+          "activity": "Short name of activity",
+          "description": "Detailed description",
+          "location": "Location name",
+          "type": "One of: food, culture, nature, shopping, adventure, relaxation, nightlife",
+          "title": "A title for this activity"
         }
       ]
-    }))
-  };
+    }
+  ]
+}`;
+
+    console.log("Calling Gemini API via Edge Function...");
+    
+    try {
+      // Call our Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke("generate-itinerary", {
+        body: { prompt },
+      });
+
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error("Failed to connect to AI service");
+      }
+
+      if (data.error) {
+        console.error("Gemini API error:", data.error);
+        throw new Error("AI couldn't generate an itinerary");
+      }
+
+      console.log("Generated itinerary:", data.itinerary);
+      return data.itinerary;
+      
+    } catch (apiError) {
+      console.error("API error:", apiError);
+      toast.error("Failed to generate itinerary with AI. Using fallback data.");
+      
+      // Fallback to mock data if the API call fails
+      return {
+        title: `Your ${preferences.budget} trip to ${preferences.destination}`,
+        description: `A ${numDays}-day itinerary for ${preferences.numTravelers} traveler(s) focusing on ${preferences.interests.join(', ')}.`,
+        days: Array.from({ length: numDays }, (_, i) => ({
+          day: i + 1,
+          activities: [
+            {
+              time: "09:00 AM",
+              activity: "Breakfast",
+              description: "Start your day with a local breakfast",
+              location: "Local cafe",
+              type: "food",
+              title: "Breakfast"
+            },
+            {
+              time: "11:00 AM",
+              activity: "Sightseeing",
+              description: "Visit popular attractions",
+              location: "City center",
+              type: "culture",
+              title: "Sightseeing"
+            },
+            {
+              time: "02:00 PM",
+              activity: "Lunch",
+              description: "Enjoy local cuisine",
+              location: "Restaurant district",
+              type: "food",
+              title: "Lunch"
+            },
+            {
+              time: "04:00 PM",
+              activity: "Activity",
+              description: `Engage in ${preferences.interests[0] || "adventure"} activities`,
+              location: "Various locations",
+              type: preferences.interests[0] || "adventure",
+              title: "Afternoon Activity"
+            },
+            {
+              time: "07:00 PM",
+              activity: "Dinner",
+              description: "Experience local nightlife and cuisine",
+              location: "Downtown",
+              type: "food",
+              title: "Dinner"
+            }
+          ]
+        }))
+      };
+    }
+  } catch (error) {
+    console.error("Error generating itinerary:", error);
+    throw new Error("Failed to generate itinerary. Please try again.");
+  }
 };
 
 function calculateDays(startDate: string, endDate: string): number {
