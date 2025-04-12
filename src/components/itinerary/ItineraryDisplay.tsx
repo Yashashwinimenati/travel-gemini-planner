@@ -8,7 +8,11 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-const getActivityIcon = (type: string) => {
+const getActivityIcon = (type: string | undefined) => {
+  if (!type) {
+    return <Tag size={16} className="text-gray-500" />;
+  }
+  
   switch (type.toLowerCase()) {
     case 'culture':
       return <Landmark size={16} className="text-purple-500" />;
@@ -44,7 +48,7 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itineraryData }) =>
     endDate: itineraryData.end_date,
     duration: itineraryData.content?.duration || 
       Math.ceil(Math.abs(new Date(itineraryData.end_date).getTime() - new Date(itineraryData.start_date).getTime()) / (1000 * 60 * 60 * 24)),
-    interests: itineraryData.interests,
+    interests: itineraryData.interests || [],
     days: itineraryData.content?.days || []
   };
 
@@ -116,7 +120,7 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itineraryData }) =>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
-            {itinerary.interests.map(interest => (
+            {itinerary.interests && itinerary.interests.map((interest: string) => (
               <span 
                 key={interest}
                 className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs text-teal-700"

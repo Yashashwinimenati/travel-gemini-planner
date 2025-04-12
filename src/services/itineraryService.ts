@@ -11,6 +11,8 @@ export interface GeneratedItinerary {
       activity: string;
       description: string;
       location?: string;
+      type?: string;
+      title?: string;
     }[];
   }[];
 }
@@ -46,31 +48,41 @@ export const generateItinerary = async (preferences: any): Promise<GeneratedItin
           time: "09:00 AM",
           activity: "Breakfast",
           description: "Start your day with a local breakfast",
-          location: "Local cafe"
+          location: "Local cafe",
+          type: "food",
+          title: "Breakfast"
         },
         {
           time: "11:00 AM",
           activity: "Sightseeing",
           description: "Visit popular attractions",
-          location: "City center"
+          location: "City center",
+          type: "culture",
+          title: "Sightseeing"
         },
         {
           time: "02:00 PM",
           activity: "Lunch",
           description: "Enjoy local cuisine",
-          location: "Restaurant district"
+          location: "Restaurant district",
+          type: "food",
+          title: "Lunch"
         },
         {
           time: "04:00 PM",
           activity: "Activity",
           description: "Engage in an activity based on your interests",
-          location: "Various locations"
+          location: "Various locations",
+          type: preferences.interests[0] || "adventure",
+          title: "Afternoon Activity"
         },
         {
           time: "07:00 PM",
           activity: "Dinner",
           description: "Experience local nightlife and cuisine",
-          location: "Downtown"
+          location: "Downtown",
+          type: "food",
+          title: "Dinner"
         }
       ]
     }))
@@ -102,7 +114,7 @@ export const saveItinerary = async (itineraryData: Omit<ItineraryData, 'id' | 'c
     throw error;
   }
   
-  return data as ItineraryData;
+  return data as unknown as ItineraryData;
 };
 
 export const getUserItineraries = async () => {
